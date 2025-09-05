@@ -208,5 +208,35 @@ func mediaConvert(cfg aws.Config, ctx context.Context, fileName string) {
 		log.Fatalf("failed to create MediaConvert job: %v", err)
 	}
 
-	fmt.Printf("MediacConvert job created! ID: %s\n", *jobResp.Job.Id)
+	jobID := *jobResp.Job.Id
+	fmt.Printf("MediacConvert job submitted! ID: %s\n", *jobResp.Job.Id)
+
+	//see if job is completed
+	for {
+		//sleep
+		time.Sleep(10 * time.Second)
+
+		jobDetails, err := client.GetJob(ctx, &mediaconvert.GetJobInput{
+			Id: aws.String(jobID),
+		})
+		if err != nil {
+			log.Fatalf("failed to get MediaConvert job: %v", err)
+		}
+
+		status := jobDetails.Job.Status
+		fmt.Println("Current job status:", status)
+
+		if status == types.JobStatusComplete {
+			fmt.Println("✅ Job completed successfully!")
+			break
+		}
+		if status == types.JobStatusError {
+			fmt.Printf("❌ Job failed: %+v\n", jobDetails.Job.ErrorMessage)
+			break
+		}
+		if status == types.JobStatusCanceled {
+			fmt.Println("⚠️ Job was canceled")
+			break
+		}
+	}
 }
